@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>画像工学 単語帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8EDEF;--ink:#12181B;--muted:#56666C;--line:#C3CFD2;
+  --front:#151B1F;--front-ink:#EAF4F2;--back:#FBFCFA;--back-ink:#12181B;
+  --accent:#1B7F70;--accent-ink:#fff;--btn:#fff;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1113;--ink:#E6EEEE;--muted:#93A4A9;--line:#2A363B;
+  --front:#1B2529;--front-ink:#EAF4F2;--back:#DCE8E5;--back-ink:#12181B;
+  --accent:#4CC3B0;--accent-ink:#0D1113;--btn:#182125;}}
+:root[data-theme="dark"]{
+  --bg:#0D1113;--ink:#E6EEEE;--muted:#93A4A9;--line:#2A363B;
+  --front:#1B2529;--front-ink:#EAF4F2;--back:#DCE8E5;--back-ink:#12181B;
+  --accent:#4CC3B0;--accent-ink:#0D1113;--btn:#182125;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;line-height:1.6;min-height:100vh}
+main{max-width:640px;margin:0 auto;padding:20px 16px 32px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h1{font-size:1.15rem;margin:0;font-weight:700}
+.count{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.scene{perspective:1200px}
+.card{position:relative;min-height:min(52vh,360px);cursor:pointer;transform-style:preserve-3d;transition:transform .45s;outline-offset:4px;border-radius:14px}
+.card.flip{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px 24px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:auto}
+.front{background:var(--front);color:var(--front-ink);border:1px solid var(--line)}
+.back{background:var(--back);color:var(--back-ink);transform:rotateY(180deg);border:1px solid var(--line)}
+.face .big{font-size:clamp(1.6rem,6vw,2.3rem);font-weight:700;line-height:1.35;word-break:break-word}
+.face .text{font-size:clamp(1.05rem,3.6vw,1.3rem);line-height:1.85;max-width:30em}
+.hint{position:absolute;bottom:12px;font-size:.78rem;opacity:.6}
+.badge{position:absolute;top:12px;right:14px;font-size:.78rem;padding:2px 10px;border-radius:99px;background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:10px}
+.row>button{flex:1}
+button{font:inherit;font-weight:500;background:var(--btn);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 10px;cursor:pointer;min-height:46px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,.card:focus-visible{outline:3px solid var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tools button{font-size:.88rem;padding:9px 6px;min-height:40px}
+.done{text-align:center;padding:40px 16px;border:1px dashed var(--line);border-radius:14px}
+.done p{margin:0 0 16px}
+.keys{color:var(--muted);font-size:.78rem;text-align:center;margin:0}
+@media (prefers-reduced-motion:reduce){.card,.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>画像工学 単語帳</h1><span class="count" id="count" aria-live="polite"></span></header>
+  <div class="bar" role="progressbar" aria-label="覚えた割合"><i id="fill"></i></div>
+
+  <div id="study">
+    <div class="scene">
+      <div class="card" id="card" role="button" tabindex="0" aria-label="カードをめくる">
+        <div class="face front"><span class="badge" id="state"></span><div class="big" id="fText"></div><span class="hint">タップでめくる</span></div>
+        <div class="face back"><div class="text" id="bText"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="done" id="done" hidden>
+    <p id="doneMsg"></p>
+    <button class="primary" id="again">もう一度はじめる</button>
+  </div>
+
+  <div class="row" id="judge">
+    <button id="no">まだ</button>
+    <button id="yes" class="primary">覚えた</button>
+  </div>
+  <div class="row">
+    <button id="prev">前へ</button>
+    <button id="next">次へ</button>
+  </div>
+  <div class="row tools">
+    <button id="shuffle">シャッフル</button>
+    <button id="dir">用語 → 説明</button>
+    <button id="only" aria-pressed="false">未習得のみ</button>
+    <button id="reset">記録を消す</button>
+  </div>
+  <p class="keys">キー操作：Space めくる ／ ← → 移動 ／ 1 まだ ／ 2 覚えた</p>
+</main>
+<script>
+const CARDS = [["画質の三大要素", "コントラスト・分解能・ノイズ（互いにトレードオフ）"], ["コントラスト", "信号と背景の濃度差。差が大きいほど見やすい"], ["空間分解能", "細かい構造（高い空間周波数）を分離できる能力"], ["ノイズ", "画像のざらつき。量子ノイズは相対ノイズ∝1/√N（線量↑で↓）"], ["散乱線含有率", "SF＝S/(S+P)。大きいほどコントラスト低下"], ["グリッド", "散乱線を吸収し一次線を通す。コントラスト改善（被曝↑）"], ["特性曲線", "入力（露光量logE）と出力（濃度/画素値）の関係を表す曲線"], ["ガンマ（階調度）", "特性曲線の直線部の傾き。大きいほど硬調（高コントラスト）"], ["ラチチュード", "適正濃度が得られる露光量の幅。ガンマと逆（トレードオフ）"], ["ダイナミックレンジ", "記録できる露光量（信号）の範囲。広いほど良い"], ["感度", "基準濃度を得るのに必要な露光量の少なさ（曲線の左右位置）"], ["ディジタルの特性", "対数リニア・広ラチチュード・表示を後から調整できる"], ["PSF", "点像分布関数。1点入力に対する応答（ボケの形）"], ["LSF", "線像分布関数。線入力への応答（PSFを線方向に積分）"], ["ESF", "エッジ広がり関数。エッジへの応答（微分でLSF）"], ["MTF", "周波数ごとのコントラスト伝達率。LSFのフーリエ変換（規格化）"], ["10%MTF", "MTFが10%になる空間周波数。高いほど高分解能"], ["系のMTF", "各要素のMTFの積。最も低い要素が律速"], ["量子ノイズ", "X線光子数の統計的ばらつき。ノイズの主因（σ∝√N）"], ["システムノイズ", "検出器・電気系由来のノイズ（線量に依存しにくい）"], ["構造ノイズ", "検出器の不均一など固定パターンのノイズ"], ["標準偏差σ", "ノイズの総量。周波数分布は分からない"], ["NPS", "ノイズの空間周波数分布（ウィーナースペクトル）。σ²＝∫NPS du"], ["白色/有色ノイズ", "白色＝全周波数一様、有色＝特定周波数に偏る"], ["物理評価", "MTF・NPS・DQE等で装置性能を数値評価（客観）"], ["視覚評価", "観察者が見て検出能を評価（ROC・AUC）"], ["感度（TPF）", "病変を正しく陽性とする割合＝TP/(TP+FN)"], ["特異度", "正常を正しく陰性とする割合＝TN/(TN+FP)"], ["ROC曲線", "縦軸TPF・横軸FPF。左上に近いほど検出能が高い"], ["AUC", "ROC曲線下面積（0〜1。実用上は0.5〜1）。大きいほど検出能が高い"]];
+const KEY = "gazo-kogaku-known-v1";
+let known = new Set();
+try { known = new Set(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify([...known])); } catch (e) {} }
+
+let order = CARDS.map((_, i) => i), pos = 0, termFirst = true, onlyUnknown = false;
+const $ = id => document.getElementById(id);
+const card = $("card");
+
+function buildDeck(shuffle){
+  let ids = CARDS.map((_, i) => i).filter(i => !onlyUnknown || !known.has(CARDS[i][0]));
+  if (shuffle) for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  order = ids; pos = 0; render();
+}
+function render(){
+  const total = CARDS.length, k = CARDS.filter(c => known.has(c[0])).length;
+  $("count").textContent = "覚えた " + k + " / " + total;
+  $("fill").style.width = (k / total * 100) + "%";
+  const finished = pos >= order.length;
+  $("study").hidden = finished; $("done").hidden = !finished;
+  $("judge").style.display = finished ? "none" : "";
+  $("prev").disabled = pos <= 0; $("next").disabled = finished;
+  if (finished) {
+    $("doneMsg").textContent = order.length === 0 ? "未習得のカードはありません。全部覚えました。" : "最後まで進みました。覚えた " + k + " / " + total + "。";
+    return;
+  }
+  const c = CARDS[order[pos]];
+  card.classList.remove("flip");
+  $("fText").textContent = termFirst ? c[0] : c[1];
+  $("bText").textContent = termFirst ? c[1] : c[0];
+  $("fText").className = termFirst ? "big" : "text";
+  $("bText").className = termFirst ? "text" : "big";
+  const st = $("state"); st.hidden = !known.has(c[0]); st.textContent = "覚えた";
+}
+function flip(){ if (pos < order.length) card.classList.toggle("flip"); }
+function go(d){ pos = Math.max(0, Math.min(order.length, pos + d)); render(); }
+function mark(v){
+  if (pos >= order.length) return;
+  const t = CARDS[order[pos]][0];
+  v ? known.add(t) : known.delete(t); save(); go(1);
+}
+card.addEventListener("click", flip);
+card.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); flip(); } });
+$("prev").onclick = () => go(-1);
+$("next").onclick = () => go(1);
+$("yes").onclick = () => mark(true);
+$("no").onclick = () => mark(false);
+$("shuffle").onclick = () => buildDeck(true);
+$("again").onclick = () => buildDeck(false);
+$("dir").onclick = () => { termFirst = !termFirst; $("dir").textContent = termFirst ? "用語 → 説明" : "説明 → 用語"; render(); };
+$("only").onclick = () => { onlyUnknown = !onlyUnknown; $("only").setAttribute("aria-pressed", onlyUnknown); buildDeck(false); };
+$("reset").onclick = () => { if (confirm("覚えた記録をすべて消します。よろしいですか？")) { known.clear(); save(); buildDeck(false); } };
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "BUTTON" && e.key === " ") return;
+  if (e.key === " ") { e.preventDefault(); flip(); }
+  else if (e.key === "ArrowRight") go(1);
+  else if (e.key === "ArrowLeft") go(-1);
+  else if (e.key === "1") mark(false);
+  else if (e.key === "2") mark(true);
+});
+render();
+</script>
+</body>
+</html>
